@@ -1,0 +1,35 @@
+name: Run Performance Tests
+
+on:
+  schedule:
+    - cron: '0 0 * * *'     # 05:30 AM IST → peak-traffic measurement
+    - cron: '0 17 * * *'    # 10:30 PM IST → off-peak baseline
+  workflow_dispatch:          # allows manual run from GitHub UI
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Create service account key
+        run: echo '${{ secrets.SERVICE_ACCOUNT_KEY }}' > ./bigquery-writer-key.json
+
+      - name: Run GTMetrix → BigQuery ingestion
+        run: node index.js
+        env:
+          GT_API_KEY: ${{ secrets.GT_API_KEY }}
+          PROJECT_ID: ${{ secrets.PROJECT_ID }}
+          DATASET_ID: ${{ secrets.DATASET_ID }}
+          TABLE_ID: ${{ secrets.TABLE_ID }}
+          SERVICE_ACCOUNT_KEY: ./bigquery-writer-key.json
